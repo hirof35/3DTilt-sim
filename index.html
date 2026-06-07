@@ -1,0 +1,68 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="utf-8" />
+    <title>3D Tilt - Node.js Client</title>
+    <link rel="icon" href="data:,">
+    <style>
+        body {
+            background-color: #111;
+            color: #fff;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            height: 100vh;
+            margin: 0;
+            font-family: sans-serif;
+        }
+        canvas {
+            border: 2px solid #444;
+            box-shadow: 0 0 20px rgba(0,0,0,0.8);
+            background-color: #000;
+        }
+        #info {
+            margin-top: 15px;
+            font-size: 14px;
+            color: #888;
+        }
+    </style>
+    <script src="/socket.io/socket.io.js"></script>
+</head>
+<body>
+
+    <canvas id="remoteField" width="600" height="600"></canvas>
+    <div id="info">矢印キー（↑↓←→）でステージを傾けて操作します</div>
+
+    <script>
+        "use strict";
+
+        const canvas = document.getElementById("remoteField");
+        const ctx = canvas.getContext("2d");
+        
+        // Node.js サーバーへの接続 (同一ホストを想定)
+        const socket = io();
+
+        // 1. サーバーからレンダリング済みのフレームデータ（Base64等）を受信して描画
+        socket.on("renderFrame", (frameData) => {
+            const img = new Image();
+            img.onload = function() {
+                ctx.clearRect(0, 0, 600, 600);
+                ctx.drawImage(img, 0, 0);
+            };
+            img.src = frameData; // 'data:image/png;base64,...' 形式
+        });
+
+        // 2. ブラウザ側のキー入力を検知してサーバーへ同期
+        const handleKeyEvent = (keyCode, isPressed) => {
+            // 操作対象のキーコード（左:37, 上:38, 右:39, 下:40）のみ送信
+            if (keyCode >= 37 && keyCode <= 40) {
+                socket.emit("keyInput", { keyCode, isPressed });
+            }
+        };
+
+        window.addEventListener("keydown", (e) => handleKeyEvent(e.keyCode, true));
+        window.addEventListener("keyup", (e) => handleKeyEvent(e.keyCode, false));
+    </script>
+</body>
+</html>
